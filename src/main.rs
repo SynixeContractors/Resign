@@ -33,9 +33,6 @@ fn main() {
         let mut modified = SystemTime::UNIX_EPOCH;
         for addon in std::fs::read_dir(dir.path().join("addons")).expect("can't read addons dir") {
             let addon = addon.expect("can't read addon");
-            if addon.path().extension() == Some(std::ffi::OsStr::new("bisign")) {
-                std::fs::remove_file(addon.path()).expect("can't remove bikey");
-            }
             if addon.path().extension() == Some(std::ffi::OsStr::new("pbo")) {
                 maybe_addons.push(addon.path());
                 let meta = addon.metadata().expect("can't read metadata");
@@ -47,6 +44,7 @@ fn main() {
         let private_key_path = keys_dir
             .join(dir.file_name())
             .with_extension("biprivatekey");
+        mods.push(dir.path());
         if private_key_path.exists() {
             let existing_key_meta = private_key_path.metadata().expect("can't read metadata");
             if existing_key_meta.modified().expect("can't read modified") >= modified {
@@ -67,7 +65,12 @@ fn main() {
                 .write_danger(&mut File::create(private_key_path).expect("can't create bikey"))
                 .expect("can't write bikey");
         }
-        mods.push(dir);
+        for addon in std::fs::read_dir(dir.path().join("addons")).expect("can't read addons dir") {
+            let addon = addon.expect("can't read addon");
+            if addon.path().extension() == Some(std::ffi::OsStr::new("bisign")) {
+                std::fs::remove_file(addon.path()).expect("can't remove bikey");
+            }
+        }
         addons.extend(maybe_addons);
     }
     println!("Signing {} addons", addons.len());
@@ -99,9 +102,10 @@ fn main() {
                 authority
                     .to_str()
                     .expect("can't convert dir name to string")
+                    .trim_start_matches('@')
             ));
-            sig.write(&mut File::create(addon_sig).expect("can't create bikey"))
-                .expect("can't write bikey");
+            sig.write(&mut File::create(addon_sig).expect("can't create bisign"))
+                .expect("can't write bisign");
         });
         if result.is_err() {
             println!("Failed to sign {}", addon.display());
@@ -111,9 +115,9 @@ fn main() {
     });
 
     for mod_folder in mods {
-        std::fs::create_dir(mod_folder.path().join("keys")).expect("can't create keys dir");
+        std::fs::create_dir(mod_folder.join("keys")).expect("can't create keys dir");
         let private_key_path = keys_dir
-            .join(mod_folder.file_name())
+            .join(mod_folder.file_name().unwrap())
             .with_extension("biprivatekey");
         let private =
             BIPrivateKey::read(&mut File::open(private_key_path).expect("can't open private key"))
@@ -122,12 +126,14 @@ fn main() {
             .to_public_key()
             .write(
                 &mut File::create(
-                    mod_folder.path().join("keys").join(format!(
+                    mod_folder.join("keys").join(format!(
                         "resign_{}.bikey",
                         mod_folder
                             .file_name()
+                            .unwrap()
                             .to_str()
                             .expect("can't convert dir name to string")
+                            .trim_start_matches('@')
                     )),
                 )
                 .expect("can't create bikey"),
