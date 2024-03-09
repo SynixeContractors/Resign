@@ -77,6 +77,9 @@ fn main() {
         addons.extend(maybe_addons);
     }
     println!("Signing {} addons", addons.len());
+    if addons.len() < 20 {
+        println!("Addons: {:?}", addons);
+    }
 
     let pb = ProgressBar::new(addons.len() as u64);
     addons.par_iter().for_each(|addon| {
