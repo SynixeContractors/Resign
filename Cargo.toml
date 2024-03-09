@@ -6,3 +6,5 @@ edition = "2021"
 [dependencies]
 hemtt-pbo = { git = "https://github.com/brettmayson/hemtt" }
 hemtt-signing = { git = "https://github.com/brettmayson/hemtt" }
+
+indicatif = "0.17.8"
