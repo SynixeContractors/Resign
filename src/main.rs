@@ -30,7 +30,7 @@ fn main() {
             std::fs::remove_dir_all(keys).expect("can't remove keys dir");
         }
         let mut maybe_addons = Vec::new();
-        let mut modified = SystemTime::now();
+        let mut modified = SystemTime::UNIX_EPOCH;
         for addon in std::fs::read_dir(dir.path().join("addons")).expect("can't read addons dir") {
             let addon = addon.expect("can't read addon");
             if addon.path().extension() == Some(std::ffi::OsStr::new("bisign")) {
