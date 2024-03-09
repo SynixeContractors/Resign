@@ -20,14 +20,12 @@ fn main() {
         {
             continue;
         }
+        let keys = dir.path().join("keys");
+        if keys.exists() {
+            std::fs::remove_dir_all(keys).expect("can't remove keys dir");
+        }
         for addon in std::fs::read_dir(dir.path().join("addons")).expect("can't read addons dir") {
             let addon = addon.expect("can't read addon");
-            if addon.path().is_dir() {
-                if addon.path().file_name() == Some(std::ffi::OsStr::new("keys")) {
-                    std::fs::remove_dir_all(addon.path()).expect("can't remove keys dir");
-                }
-                continue;
-            }
             if addon.path().extension() == Some(std::ffi::OsStr::new("bisign")) {
                 std::fs::remove_file(addon.path()).expect("can't remove bikey");
             }
@@ -44,16 +42,22 @@ fn main() {
 
     let pb = ProgressBar::new(addons.len() as u64);
     addons.par_iter().for_each(|addon| {
-        let sig = private
-            .sign(
-                &mut ReadablePbo::from(File::open(addon).expect("can't open pbo"))
-                    .expect("can't read pbo"),
-                hemtt_pbo::BISignVersion::V3,
-            )
-            .expect("can't sign pbo");
-        let addon_sig = addon.with_extension("synixe_resign.bisign");
-        sig.write(&mut File::create(addon_sig).expect("can't create bikey"))
-            .expect("can't write bikey");
+        let result = std::panic::catch_unwind(|| {
+            let sig = private
+                .sign(
+                    &mut ReadablePbo::from(File::open(addon).expect("can't open pbo"))
+                        .expect("can't read pbo"),
+                    hemtt_pbo::BISignVersion::V3,
+                )
+                .expect("can't sign pbo");
+            let addon_sig = addon.with_extension("synixe_resign.bisign");
+            sig.write(&mut File::create(addon_sig).expect("can't create bikey"))
+                .expect("can't write bikey");
+        });
+        if result.is_err() {
+            println!("Failed to sign {}", addon.display());
+            eprintln!("{:?}", result);
+        }
         pb.inc(1);
     });
 
