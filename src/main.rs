@@ -25,9 +25,11 @@ fn main() {
         {
             continue;
         }
-        let keys = dir.path().join("keys");
-        if keys.exists() {
-            std::fs::remove_dir_all(keys).expect("can't remove keys dir");
+        for key_dir in ["key", "keys"] {
+            let keys = dir.path().join(key_dir);
+            if keys.exists() {
+                std::fs::remove_dir_all(keys).expect("can't remove keys dir");
+            }
         }
         let mut maybe_addons = Vec::new();
         let mut modified = SystemTime::UNIX_EPOCH;
