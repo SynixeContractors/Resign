@@ -51,24 +51,25 @@ fn main() {
                 continue;
             }
         } else {
-            let private = BIPrivateKey::generate(
-                2048,
-                &format!(
-                    "resign_{}",
-                    dir.file_name()
-                        .to_str()
-                        .expect("can't convert dir name to string")
-                ),
-            )
-            .expect("can't generate private key");
-            private
-                .write_danger(&mut File::create(private_key_path).expect("can't create bikey"))
-                .expect("can't write bikey");
+            let _ = std::fs::remove_file(&private_key_path);
         }
+        let private = BIPrivateKey::generate(
+            2048,
+            &format!(
+                "resign_{}",
+                dir.file_name()
+                    .to_str()
+                    .expect("can't convert dir name to string")
+            ),
+        )
+        .expect("can't generate private key");
+        private
+            .write_danger(&mut File::create(private_key_path).expect("can't create bikey"))
+            .expect("can't write bikey");
         for addon in std::fs::read_dir(dir.path().join("addons")).expect("can't read addons dir") {
             let addon = addon.expect("can't read addon");
             if addon.path().extension() == Some(std::ffi::OsStr::new("bisign")) {
-                std::fs::remove_file(addon.path()).expect("can't remove bikey");
+                std::fs::remove_file(addon.path()).expect("can't remove bisgn");
             }
         }
         addons.extend(maybe_addons);
@@ -125,8 +126,7 @@ fn main() {
         private
             .to_public_key()
             .write(
-                &mut File::create(
-                    mod_folder.join("keys").join(format!(
+                &mut File::create(mod_folder.join("keys").join(format!(
                         "resign_{}.bikey",
                         mod_folder
                             .file_name()
@@ -134,8 +134,7 @@ fn main() {
                             .to_str()
                             .expect("can't convert dir name to string")
                             .trim_start_matches('@')
-                    )),
-                )
+                    )))
                 .expect("can't create bikey"),
             )
             .expect("can't write bikey");
