@@ -3,6 +3,7 @@ use std::fs::File;
 use hemtt_pbo::ReadablePbo;
 use hemtt_signing::BIPrivateKey;
 use indicatif::ProgressBar;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 fn main() {
     let mut addons = Vec::new();
@@ -42,19 +43,19 @@ fn main() {
     let public = private.to_public_key();
 
     let pb = ProgressBar::new(addons.len() as u64);
-    for addon in addons {
+    addons.par_iter().for_each(|addon| {
         let sig = private
             .sign(
-                &mut ReadablePbo::from(File::open(&addon).expect("can't open pbo"))
+                &mut ReadablePbo::from(File::open(addon).expect("can't open pbo"))
                     .expect("can't read pbo"),
                 hemtt_pbo::BISignVersion::V3,
             )
             .expect("can't sign pbo");
         let addon_sig = addon.with_extension("synixe_resign.bisign");
-        sig.write(&mut File::create(&addon_sig).expect("can't create bikey"))
+        sig.write(&mut File::create(addon_sig).expect("can't create bikey"))
             .expect("can't write bikey");
         pb.inc(1);
-    }
+    });
 
     std::fs::remove_dir_all("synixe_resign").expect("can't remove resign mod");
     std::fs::create_dir("synixe_resign").expect("can't create resign mod");
