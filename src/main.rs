@@ -61,7 +61,7 @@ fn main() {
         pb.inc(1);
     });
 
-    std::fs::remove_dir_all("synixe_resign").expect("can't remove resign mod");
+    let _ = std::fs::remove_dir_all("synixe_resign");
     std::fs::create_dir("synixe_resign").expect("can't create resign mod");
     public
         .write(&mut File::create("synixe_resign/synixe_resign.bikey").expect("can't create bikey"))
