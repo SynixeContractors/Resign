@@ -52,8 +52,19 @@ fn main() {
             if existing_key_meta.modified().expect("can't read modified") >= modified {
                 continue;
             }
-        } else {
-            let _ = std::fs::remove_file(&private_key_path);
+            println!(
+                "Outdated key for {}, key {} vs addons {}",
+                dir.file_name()
+                    .to_str()
+                    .expect("can't convert dir name to string"),
+                existing_key_meta
+                    .modified()
+                    .expect("can't read modified")
+                    .elapsed()
+                    .expect("can't read elapsed")
+                    .as_secs(),
+                modified.elapsed().expect("can't read elapsed").as_secs()
+            );
         }
         let private = BIPrivateKey::generate(
             2048,
@@ -77,7 +88,7 @@ fn main() {
         addons.extend(maybe_addons);
     }
     println!("Signing {} addons", addons.len());
-    if addons.len() < 20 {
+    if addons.len() < 30 {
         println!("Addons: {:?}", addons);
     }
 
