@@ -63,7 +63,10 @@ fn main() {
                     .elapsed()
                     .expect("can't read elapsed")
                     .as_secs(),
-                modified.elapsed().expect("can't read elapsed").as_secs()
+                modified
+                    .elapsed()
+                    .unwrap_or_else(|_| panic!("can't read elapsed for {:?}", dir.file_name()))
+                    .as_secs()
             );
         }
         let private = BIPrivateKey::generate(
