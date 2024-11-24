@@ -1,4 +1,7 @@
-use std::{fs::File, time::SystemTime};
+use std::{
+    fs::File,
+    time::{Duration, SystemTime},
+};
 
 use hemtt_pbo::ReadablePbo;
 use hemtt_signing::BIPrivateKey;
@@ -65,7 +68,10 @@ fn main() {
                     .as_secs(),
                 modified
                     .elapsed()
-                    .unwrap_or_else(|_| panic!("can't read elapsed for {:?}", dir.file_name()))
+                    .unwrap_or_else(|_| {
+                        println!("can't read elapsed for {:?}", dir.file_name());
+                        Duration::from_secs(60)
+                    })
                     .as_secs()
             );
         }
