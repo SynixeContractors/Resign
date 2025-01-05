@@ -11,7 +11,7 @@ const STATE_FILE: &str = "pallas.toml";
 
 impl State {
     /// Load the state from the given path
-    /// 
+    ///
     /// # Errors
     /// If the file can't be read or the file is not valid toml
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
@@ -21,7 +21,7 @@ impl State {
     }
 
     /// Save the state to the given path
-    /// 
+    ///
     /// # Errors
     /// If the file can't be written
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn std::error::Error>> {

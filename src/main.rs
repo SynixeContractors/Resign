@@ -118,11 +118,11 @@ fn main() {
         for addon in std::fs::read_dir(dir.path().join("addons")).expect("can't read addons dir") {
             let addon = addon.expect("can't read addon");
             if addon.path().extension() == Some(std::ffi::OsStr::new("bisign"))
-                && addon
+                && !addon
                     .path()
                     .to_str()
                     .expect("can't convert path to str")
-                    .contains(".pbo.")
+                    .contains(".ebo.")
             {
                 std::fs::remove_file(addon.path()).expect("can't remove bisgn");
             }
@@ -162,7 +162,7 @@ fn main() {
                 )
                 .expect("can't sign pbo");
             let addon_sig = addon.with_extension(format!(
-                "pallas_{}.bisign",
+                ".pbo.pallas_{}.bisign",
                 authority
                     .to_str()
                     .expect("can't convert dir name to string")
@@ -186,8 +186,7 @@ fn main() {
                     .file_name()
                     .expect("can't get file name")
                     .to_str()
-                    .expect("can't convert dir name to string")
-                    .trim_start_matches('@'),
+                    .expect("can't convert dir name to string"),
             )
             .expect("can't get private key")
             .clone();
