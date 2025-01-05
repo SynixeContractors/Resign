@@ -14,10 +14,13 @@ impl State {
     /// Load the state from the given path
     ///
     /// # Errors
-    /// If the file can't be read or the file is not valid toml
+    /// If the file can't be read
+    /// 
+    /// # Panics
+    /// If the path can't be converted to a string
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let path = path.as_ref().join(STATE_FILE);
-        let state = savefile::load_from_mem(std::fs::read_to_string(&path)?.as_bytes(), VERSION)?;
+        let state = savefile::load_file(path.to_str().expect("path can be str"), VERSION)?;
         Ok(state)
     }
 
