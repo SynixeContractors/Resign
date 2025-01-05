@@ -154,7 +154,7 @@ fn main() {
                 )
                 .expect("can't sign pbo");
             let addon_sig = addon.with_extension(format!(
-                ".pbo.pallas_{}.bisign",
+                "pbo.pallas_{}.bisign",
                 authority
                     .to_str()
                     .expect("can't convert dir name to string")
