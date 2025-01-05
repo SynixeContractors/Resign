@@ -122,7 +122,7 @@ fn main() {
         addons.extend(maybe_addons);
     }
     println!("Signing {} addons", addons.len());
-    if addons.len() < 30 {
+    if addons.len() < 30 && !addons.is_empty() {
         println!("Addons: {addons:?}");
     }
 
