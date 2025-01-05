@@ -15,7 +15,7 @@ impl State {
     ///
     /// # Errors
     /// If the file can't be read
-    /// 
+    ///
     /// # Panics
     /// If the path can't be converted to a string
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {

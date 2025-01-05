@@ -180,16 +180,15 @@ fn main() {
 
     for mod_folder in mods {
         std::fs::create_dir(mod_folder.join("keys")).expect("can't create keys dir");
-        let private = keys
-            .get(
-                mod_folder
-                    .file_name()
-                    .expect("can't get file name")
-                    .to_str()
-                    .expect("can't convert dir name to string"),
-            )
-            .expect("can't get private key")
-            .clone();
+        let Some(private) = keys.get(
+            mod_folder
+                .file_name()
+                .expect("can't get file name")
+                .to_str()
+                .expect("can't convert dir name to string"),
+        ) else {
+            continue;
+        };
         private
             .to_public_key()
             .write(
