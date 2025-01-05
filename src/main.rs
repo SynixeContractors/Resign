@@ -17,6 +17,17 @@ fn main() {
     let src_dir = std::env::args()
         .nth(1)
         .expect("Please provide the source directory");
+
+    // check for -v or other - flags
+    if src_dir.starts_with('-') {
+        if src_dir == "-v" {
+            println!("v{}", env!("CARGO_PKG_VERSION"));
+            std::process::exit(0);
+        }
+        println!("Unknown flag: {src_dir}");
+        std::process::exit(1);
+    }
+
     let src_dir = std::path::Path::new(&src_dir);
     if !src_dir.exists() || !src_dir.is_dir() {
         println!("Source directory does not exist");
@@ -43,6 +54,12 @@ fn main() {
         {
             continue;
         }
+
+        if !dir.path().join("addons").exists() {
+            println!("No addons folder in {}", dir.path().display());
+            continue;
+        }
+
         let mut saw_ebo = false;
         let mut saw_pbo = false;
         let mut maybe_addons = Vec::new();
