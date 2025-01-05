@@ -171,7 +171,6 @@ fn main() {
     });
 
     for (mod_folder, saw_ebo) in mods {
-        std::fs::create_dir(mod_folder.join("keys")).expect("can't create keys dir");
         let Some(private) = keys.get(
             mod_folder
                 .file_name()
@@ -189,6 +188,7 @@ fn main() {
                 }
             }
         }
+        std::fs::create_dir(mod_folder.join("keys")).expect("can't create keys dir");
         private
             .to_public_key()
             .write(
