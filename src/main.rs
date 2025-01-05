@@ -73,7 +73,7 @@ fn main() {
         if !saw_pbo {
             continue;
         }
-        mods.push(dir.path());
+        mods.push((dir.path(), saw_ebo));
 
         let dir_name = dir
             .file_name()
@@ -170,7 +170,7 @@ fn main() {
         pb.inc(1);
     });
 
-    for mod_folder in mods {
+    for (mod_folder, saw_ebo) in mods {
         std::fs::create_dir(mod_folder.join("keys")).expect("can't create keys dir");
         let Some(private) = keys.get(
             mod_folder
@@ -181,10 +181,12 @@ fn main() {
         ) else {
             continue;
         };
-        for key_dir in ["key", "keys"] {
-            let key_dir = mod_folder.join(key_dir);
-            if key_dir.exists() {
-                std::fs::remove_dir_all(key_dir).expect("can't remove key dir");
+        if !saw_ebo {
+            for key_dir in ["key", "keys"] {
+                let key_dir = mod_folder.join(key_dir);
+                if key_dir.exists() {
+                    std::fs::remove_dir_all(key_dir).expect("can't remove key dir");
+                }
             }
         }
         private
