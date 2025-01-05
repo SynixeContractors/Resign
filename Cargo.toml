@@ -7,5 +7,5 @@ edition = "2021"
 hemtt-pbo = { git = "https://github.com/brettmayson/hemtt" }
 hemtt-signing = { git = "https://github.com/brettmayson/hemtt" }
 
-indicatif = "0.17.8"
+indicatif = "0.17.9"
 rayon = "1.10.0"

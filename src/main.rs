@@ -9,13 +9,23 @@ use indicatif::ProgressBar;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 fn main() {
+    // first cli arg is the source directory
+    let src_dir = std::env::args()
+        .nth(1)
+        .expect("Please provide the source directory");
+    let src_dir = std::path::Path::new(&src_dir);
+    if !src_dir.exists() || !src_dir.is_dir() {
+        println!("Source directory does not exist");
+        std::process::exit(1);
+    }
+
     let keys_dir = std::path::Path::new("pkeys");
     if !keys_dir.exists() {
         std::fs::create_dir(keys_dir).expect("can't create keys dir");
     }
     let mut mods = Vec::new();
     let mut addons = Vec::new();
-    for dirs in std::fs::read_dir("src").expect("can't read root dir") {
+    for dirs in std::fs::read_dir(src_dir).expect("can't read root dir") {
         let dir = dirs.expect("can't read dir");
         if !dir.path().is_dir() {
             continue;
@@ -28,23 +38,37 @@ fn main() {
         {
             continue;
         }
-        for key_dir in ["key", "keys"] {
-            let keys = dir.path().join(key_dir);
-            if keys.exists() {
-                std::fs::remove_dir_all(keys).expect("can't remove keys dir");
-            }
-        }
+        let mut saw_ebo = false;
+        let mut saw_pbo = false;
         let mut maybe_addons = Vec::new();
         let mut modified = SystemTime::UNIX_EPOCH;
         for addon in std::fs::read_dir(dir.path().join("addons")).expect("can't read addons dir") {
             let addon = addon.expect("can't read addon");
-            if addon.path().extension() == Some(std::ffi::OsStr::new("pbo")) {
-                maybe_addons.push(addon.path());
-                let meta = addon.metadata().expect("can't read metadata");
-                if meta.modified().expect("can't read modified") > modified {
-                    modified = meta.modified().expect("can't read modified");
+            match addon.path().extension().unwrap().to_str().unwrap() {
+                "pbo" => {
+                    maybe_addons.push(addon.path());
+                    let meta = addon.metadata().expect("can't read metadata");
+                    if meta.modified().expect("can't read modified") > modified {
+                        modified = meta.modified().expect("can't read modified");
+                    }
+                    saw_pbo = true;
+                }
+                "ebo" => {
+                    saw_ebo = true;
+                }
+                _ => {}
+            }
+        }
+        if !saw_ebo {
+            for key_dir in ["key", "keys"] {
+                let key_dir = dir.path().join(key_dir);
+                if key_dir.exists() {
+                    std::fs::remove_dir_all(key_dir).expect("can't remove key dir");
                 }
             }
+        }
+        if !saw_pbo {
+            continue;
         }
         let private_key_path = keys_dir
             .join(dir.file_name())
@@ -90,7 +114,7 @@ fn main() {
             .expect("can't write bikey");
         for addon in std::fs::read_dir(dir.path().join("addons")).expect("can't read addons dir") {
             let addon = addon.expect("can't read addon");
-            if addon.path().extension() == Some(std::ffi::OsStr::new("bisign")) {
+            if addon.path().extension() == Some(std::ffi::OsStr::new("bisign")) && addon.path().to_str().unwrap().contains(".pbo.") {
                 std::fs::remove_file(addon.path()).expect("can't remove bisgn");
             }
         }
@@ -165,5 +189,5 @@ fn main() {
             .expect("can't write bikey");
     }
 
-    pb.finish_with_message("Done, created synixe_resign.bikey");
+    pb.finish_with_message("Done, created private keys and signed addons");
 }
