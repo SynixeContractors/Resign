@@ -1,6 +1,6 @@
 # Pallas
 
-Resign Arma 3 Mods
+Resign Arma 3 Mod Repositories
 
 ## Usage
 
