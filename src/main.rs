@@ -1,13 +1,17 @@
 use std::{
     fs::File,
+    sync::Arc,
     time::{Duration, SystemTime},
 };
 
+use dashmap::DashMap;
 use hemtt_pbo::ReadablePbo;
 use hemtt_signing::BIPrivateKey;
 use indicatif::ProgressBar;
+use pallas::state::State;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
+#[allow(clippy::too_many_lines)]
 fn main() {
     // first cli arg is the source directory
     let src_dir = std::env::args()
@@ -19,10 +23,11 @@ fn main() {
         std::process::exit(1);
     }
 
-    let keys_dir = std::path::Path::new("pkeys");
-    if !keys_dir.exists() {
-        std::fs::create_dir(keys_dir).expect("can't create keys dir");
-    }
+    let previous_state = State::load(src_dir).unwrap_or_default();
+    let mut new_state = State::default();
+
+    let keys = DashMap::new();
+
     let mut mods = Vec::new();
     let mut addons = Vec::new();
     for dirs in std::fs::read_dir(src_dir).expect("can't read root dir") {
@@ -44,7 +49,13 @@ fn main() {
         let mut modified = SystemTime::UNIX_EPOCH;
         for addon in std::fs::read_dir(dir.path().join("addons")).expect("can't read addons dir") {
             let addon = addon.expect("can't read addon");
-            match addon.path().extension().unwrap().to_str().unwrap() {
+            match addon
+                .path()
+                .extension()
+                .expect("can't get extension")
+                .to_str()
+                .expect("can't convert ext to str")
+            {
                 "pbo" => {
                     maybe_addons.push(addon.path());
                     let meta = addon.metadata().expect("can't read metadata");
@@ -70,51 +81,49 @@ fn main() {
         if !saw_pbo {
             continue;
         }
-        let private_key_path = keys_dir
-            .join(dir.file_name())
-            .with_extension("biprivatekey");
         mods.push(dir.path());
-        if private_key_path.exists() {
-            let existing_key_meta = private_key_path.metadata().expect("can't read metadata");
-            if existing_key_meta.modified().expect("can't read modified") >= modified {
+
+        let dir_name = dir
+            .file_name()
+            .to_str()
+            .expect("can't convert dir name to string")
+            .to_string();
+
+        if let Some(last_modified) = previous_state.modified(&dir_name) {
+            if last_modified >= modified {
+                new_state.update(dir_name.to_string(), modified);
                 continue;
             }
-            println!(
-                "Outdated key for {}, key {} vs addons {}",
-                dir.file_name()
-                    .to_str()
-                    .expect("can't convert dir name to string"),
-                existing_key_meta
-                    .modified()
-                    .expect("can't read modified")
-                    .elapsed()
-                    .expect("can't read elapsed")
-                    .as_secs(),
-                modified
-                    .elapsed()
-                    .unwrap_or_else(|_| {
-                        println!("can't read elapsed for {:?}", dir.file_name());
-                        Duration::from_secs(60)
-                    })
-                    .as_secs()
-            );
         }
-        let private = BIPrivateKey::generate(
-            2048,
-            &format!(
-                "resign_{}",
-                dir.file_name()
-                    .to_str()
-                    .expect("can't convert dir name to string")
-            ),
-        )
-        .expect("can't generate private key");
-        private
-            .write_danger(&mut File::create(private_key_path).expect("can't create bikey"))
-            .expect("can't write bikey");
+        println!("Generating key for {dir_name}");
+        new_state.update(
+            dir_name.to_string(),
+            SystemTime::now() - Duration::from_secs(1),
+        );
+
+        keys.insert(
+            dir_name.to_string(),
+            BIPrivateKey::generate(
+                2048,
+                &format!(
+                    "pallas_{}",
+                    dir.file_name()
+                        .to_str()
+                        .expect("can't convert dir name to string")
+                ),
+            )
+            .expect("can't generate private key"),
+        );
+
         for addon in std::fs::read_dir(dir.path().join("addons")).expect("can't read addons dir") {
             let addon = addon.expect("can't read addon");
-            if addon.path().extension() == Some(std::ffi::OsStr::new("bisign")) && addon.path().to_str().unwrap().contains(".pbo.") {
+            if addon.path().extension() == Some(std::ffi::OsStr::new("bisign"))
+                && addon
+                    .path()
+                    .to_str()
+                    .expect("can't convert path to str")
+                    .contains(".pbo.")
+            {
                 std::fs::remove_file(addon.path()).expect("can't remove bisgn");
             }
         }
@@ -122,24 +131,29 @@ fn main() {
     }
     println!("Signing {} addons", addons.len());
     if addons.len() < 30 {
-        println!("Addons: {:?}", addons);
+        println!("Addons: {addons:?}");
     }
 
     let pb = ProgressBar::new(addons.len() as u64);
+    let keys = Arc::new(keys);
     addons.par_iter().for_each(|addon| {
-        let result = std::panic::catch_unwind(|| {
-            let authority = addon
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .file_name()
-                .unwrap();
-            let private_key_path = keys_dir.join(authority).with_extension("biprivatekey");
-            let private = BIPrivateKey::read(
-                &mut File::open(private_key_path).expect("can't open private key"),
+        let keys = keys.clone();
+        let authority = addon
+            .parent()
+            .expect("can't get first parent")
+            .parent()
+            .expect("can't get second parent")
+            .file_name()
+            .expect("can't get file name");
+        let private = keys
+            .get(
+                authority
+                    .to_str()
+                    .expect("can't convert dir name to string"),
             )
-            .expect("can't read private key");
+            .expect("can't get private key")
+            .clone();
+        let result = std::panic::catch_unwind(|| {
             let sig = private
                 .sign(
                     &mut ReadablePbo::from(File::open(addon).expect("can't open pbo"))
@@ -148,7 +162,7 @@ fn main() {
                 )
                 .expect("can't sign pbo");
             let addon_sig = addon.with_extension(format!(
-                "resign_{}.bisign",
+                "pallas_{}.bisign",
                 authority
                     .to_str()
                     .expect("can't convert dir name to string")
@@ -159,27 +173,32 @@ fn main() {
         });
         if result.is_err() {
             println!("Failed to sign {}", addon.display());
-            eprintln!("{:?}", result);
+            eprintln!("{result:?}");
         }
         pb.inc(1);
     });
 
     for mod_folder in mods {
         std::fs::create_dir(mod_folder.join("keys")).expect("can't create keys dir");
-        let private_key_path = keys_dir
-            .join(mod_folder.file_name().unwrap())
-            .with_extension("biprivatekey");
-        let private =
-            BIPrivateKey::read(&mut File::open(private_key_path).expect("can't open private key"))
-                .expect("can't read private key");
+        let private = keys
+            .get(
+                mod_folder
+                    .file_name()
+                    .expect("can't get file name")
+                    .to_str()
+                    .expect("can't convert dir name to string")
+                    .trim_start_matches('@'),
+            )
+            .expect("can't get private key")
+            .clone();
         private
             .to_public_key()
             .write(
                 &mut File::create(mod_folder.join("keys").join(format!(
-                        "resign_{}.bikey",
+                        "pallas_{}.bikey",
                         mod_folder
                             .file_name()
-                            .unwrap()
+                            .expect("can't get file name")
                             .to_str()
                             .expect("can't convert dir name to string")
                             .trim_start_matches('@')

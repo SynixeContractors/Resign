@@ -18,10 +18,10 @@ jobs:
         include:
           - os: ubuntu-latest
             name: linux-x64
-            exe: resign
+            exe: pallas
           - os: windows-latest
             name: windows-x64
-            exe: resign.exe
+            exe: pallas.exe
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
