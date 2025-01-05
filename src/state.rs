@@ -1,13 +1,14 @@
 use std::{collections::HashMap, path::Path, time::SystemTime};
 
-use serde::{Deserialize, Serialize};
+use savefile_derive::Savefile;
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Savefile)]
 pub struct State {
     pub modified: HashMap<String, SystemTime>,
 }
 
-const STATE_FILE: &str = "pallas.toml";
+const STATE_FILE: &str = "pallas.state";
+const VERSION: u32 = 0;
 
 impl State {
     /// Load the state from the given path
@@ -16,7 +17,7 @@ impl State {
     /// If the file can't be read or the file is not valid toml
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let path = path.as_ref().join(STATE_FILE);
-        let state = toml::from_str(&std::fs::read_to_string(&path)?)?;
+        let state = savefile::load_from_mem(std::fs::read_to_string(&path)?.as_bytes(), VERSION)?;
         Ok(state)
     }
 
@@ -24,9 +25,12 @@ impl State {
     ///
     /// # Errors
     /// If the file can't be written
+    ///
+    /// # Panics
+    /// If the path can't be converted to a string
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn std::error::Error>> {
         let path = path.as_ref().join(STATE_FILE);
-        std::fs::write(&path, toml::to_string(self)?)?;
+        savefile::save_file(path.to_str().expect("path can be str"), VERSION, self)?;
         Ok(())
     }
 

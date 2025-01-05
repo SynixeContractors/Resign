@@ -21,5 +21,5 @@ hemtt-signing = { git = "https://github.com/brettmayson/hemtt" }
 dashmap = "6.1.0"
 indicatif = "0.17.9"
 rayon = "1.10.0"
-serde = { version = "1.0.217", features = ["derive"] }
-toml = "0.8.19"
+savefile = "0.18.5"
+savefile-derive = "0.18.5"
