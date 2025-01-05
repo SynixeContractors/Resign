@@ -206,6 +206,6 @@ fn main() {
             )
             .expect("can't write bikey");
     }
-
     pb.finish_with_message("Done, created private keys and signed addons");
+    new_state.save(src_dir).expect("can't save state");
 }
