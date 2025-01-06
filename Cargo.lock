@@ -760,7 +760,7 @@ dependencies = [
 
 [[package]]
 name = "pallas"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "dashmap",
  "hemtt-pbo",
