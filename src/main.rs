@@ -28,6 +28,9 @@ fn main() {
         std::process::exit(1);
     }
 
+    // Any other arguments are added to the forced list
+    let forced = std::env::args().skip(2).collect::<Vec<String>>();
+
     let src_dir = std::path::Path::new(&src_dir);
     if !src_dir.exists() || !src_dir.is_dir() {
         println!("Source directory does not exist");
@@ -98,10 +101,12 @@ fn main() {
             .expect("can't convert dir name to string")
             .to_string();
 
-        if let Some(last_modified) = previous_state.modified(&dir_name) {
-            if last_modified >= modified {
-                new_state.update(dir_name.to_string(), modified);
-                continue;
+        if !forced.contains(&dir_name) {
+            if let Some(last_modified) = previous_state.modified(&dir_name) {
+                if last_modified >= modified {
+                    new_state.update(dir_name.to_string(), modified);
+                    continue;
+                }
             }
         }
         println!("Generating key for {dir_name}");
